@@ -61,14 +61,23 @@ aios/
 
 | Layer | Technology |
 |-------|-----------|
+
 | Language | Rust |
+
 | Async runtime | Tokio |
+
 | LLM backend | Ollama (llama3.2) |
+
 | Embeddings | Ollama (nomic-embed-text) |
+
 | Database | SQLite via rusqlite |
+
 | Search | Tantivy |
+
 | Voice | whisper.cpp |
+
 | Terminal UI | ratatui |
+
 | Desktop UI | Tauri + egui |
 
 ---
