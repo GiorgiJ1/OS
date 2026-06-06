@@ -43,18 +43,31 @@ AIOS should search indexed documents, identify relevant files, summarize finding
 
 ## Architecture
 aios/
+
 ├── crates/
+
 │   ├── shared        # Core types and structs
+
 │   ├── memory        # SQLite database layer + migrations
+
 │   ├── document      # File parsing and chunking (PDF, DOCX, TXT)
+
 │   ├── embeddings    # Vector generation via Ollama
+
 │   ├── search        # Tantivy keyword + semantic search
+
 │   ├── models        # Ollama LLM client with streaming
+
 │   ├── assistant     # Orchestration layer
+
 │   ├── system        # Linux system integration
+
 │   ├── voice         # whisper.cpp voice interface
+
 │   ├── api           # HTTP API layer
+
 │   ├── ui-tui        # Terminal interface (ratatui)
+
 │   └── ui-desktop    # Desktop interface (Tauri + egui)
 
 ## Tech Stack
