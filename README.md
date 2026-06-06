@@ -9,7 +9,6 @@ AIOS replaces the traditional desktop workflow with a single conversational inte
 ```
 Traditional:  You → Desktop → Applications → Files → Information
 AIOS:         You → Assistant → Information / Actions
-```
 
 Built from scratch in Rust. Runs fully offline. Your data never leaves your machine.
 
@@ -43,8 +42,6 @@ AIOS should search indexed documents, identify relevant files, summarize finding
 ---
 
 ## Architecture
-
-```
 aios/
 ├── crates/
 │   ├── shared        # Core types and structs
@@ -59,9 +56,6 @@ aios/
 │   ├── api           # HTTP API layer
 │   ├── ui-tui        # Terminal interface (ratatui)
 │   └── ui-desktop    # Desktop interface (Tauri + egui)
-```
-
----
 
 ## Tech Stack
 
@@ -92,7 +86,7 @@ aios/
 ```bash
 git clone https://github.com/yourusername/aios.git
 cd aios
-```
+
 
 **2. Pull the required models**
 ```bash
@@ -136,12 +130,3 @@ MIT
 EOF
 
 echo "README.md created"
-```
-
-Run that from the root of your project, then:
-
-```bash
-git add README.md
-git commit -m "docs: add README"
-git push
-```
