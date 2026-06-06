@@ -1,0 +1,11 @@
+[package]
+name = "aios-system"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aios-shared      = { path = "../shared" }
+anyhow.workspace = true
+tracing.workspace = true
+tokio.workspace  = true
+sysinfo          = "0.30"

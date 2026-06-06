@@ -1,0 +1,13 @@
+[package]
+name = "aios-search"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aios-shared       = { path = "../shared" }
+aios-memory       = { path = "../memory" }
+aios-embeddings   = { path = "../embeddings" }
+anyhow.workspace  = true
+tracing.workspace = true
+tokio.workspace   = true
+tantivy           = "0.22"

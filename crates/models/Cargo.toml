@@ -1,0 +1,16 @@
+[package]
+name = "aios-models"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aios-shared           = { path = "../shared" }
+anyhow.workspace      = true
+thiserror.workspace   = true
+serde.workspace       = true
+serde_json.workspace  = true
+tracing.workspace     = true
+tokio.workspace       = true
+reqwest.workspace     = true
+futures.workspace     = true
+async-trait.workspace = true

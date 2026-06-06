@@ -1,0 +1,21 @@
+[package]
+name = "aios-ui-tui"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "aios"
+path = "src/main.rs"
+
+[dependencies]
+aios-shared        = { path = "../shared" }
+aios-assistant     = { path = "../assistant" }
+aios-memory        = { path = "../memory" }
+aios-document      = { path = "../document" }
+aios-embeddings    = { path = "../embeddings" }
+anyhow.workspace   = true
+serde.workspace    = true
+tracing.workspace  = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio.workspace    = true
+uuid.workspace     = true

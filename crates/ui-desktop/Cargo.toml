@@ -1,0 +1,11 @@
+[package]
+name = "aios-ui-desktop"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aios-shared       = { path = "../shared" }
+aios-assistant    = { path = "../assistant" }
+anyhow.workspace  = true
+tracing.workspace = true
+tokio.workspace   = true
