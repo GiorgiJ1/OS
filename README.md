@@ -9,7 +9,7 @@ AIOS replaces the traditional desktop workflow with a single conversational inte
 ```
 Traditional:  You → Desktop → Applications → Files → Information
 AIOS:         You → Assistant → Information / Actions
-```
+
 
 Built from scratch in Rust. Runs fully offline. Your data never leaves your machine.
 
@@ -44,7 +44,7 @@ AIOS searches indexed documents, identifies relevant files, summarizes findings,
 
 ## Architecture
 
-```
+
 aios/
 ├── crates/
 │   ├── shared        # Core types and structs
@@ -59,7 +59,7 @@ aios/
 │   ├── api           # HTTP API layer (planned)
 │   ├── ui-tui        # Terminal REPL (current)
 │   └── ui-desktop    # Tauri + egui desktop UI (planned)
-```
+
 
 ---
 
@@ -90,13 +90,21 @@ Extract new facts → store as memories
 | Layer | Technology |
 |-------|-----------|
 | Language | Rust |
+
 | Async runtime | Tokio |
+
 | LLM backend | Ollama (llama3.2) |
+
 | Embeddings | Ollama (nomic-embed-text) |
+
 | Database | SQLite via rusqlite |
+
 | Full-text search | Tantivy |
+
 | Voice | whisper.cpp (planned) |
+
 | Terminal UI | ratatui (planned) |
+
 | Desktop UI | Tauri + egui (planned) |
 
 ---
@@ -136,7 +144,7 @@ cargo run -p aios-ui-tui
 
 ## Usage
 
-```
+
 > hello                                    # chat with the assistant
 > /index /path/to/file.pdf                 # index a single file
 > /index-dir /path/to/folder               # index a directory
@@ -145,7 +153,7 @@ cargo run -p aios-ui-tui
 > /remember key = value                    # store a fact manually
 > /forget key                              # delete a memory
 > /quit                                    # exit
-```
+
 
 ---
 
