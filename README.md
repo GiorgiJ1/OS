@@ -9,6 +9,7 @@ AIOS replaces the traditional desktop workflow with a single conversational inte
 ```
 Traditional:  You → Desktop → Applications → Files → Information
 AIOS:         You → Assistant → Information / Actions
+```
 
 Built from scratch in Rust. Runs fully offline. Your data never leaves your machine.
 
@@ -20,78 +21,83 @@ This project is in active early development. The table below reflects the curren
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | Core assistant loop + Ollama integration | ✅ Done |
-| 2 | Document ingestion (PDF, DOCX, TXT) | ✅ Done |
+| 1 | Core assistant loop + Ollama streaming | ✅ Done |
+| 2 | Document ingestion (PDF, DOCX, TXT, MD) | ✅ Done |
 | 3 | Embedding engine (nomic-embed-text) | ✅ Done |
-| 4 | Semantic search (Tantivy + cosine similarity) | 🔄 Next |
-| 5 | Context injection into prompts | ⬜ Planned |
-| 6 | Memory system | ⬜ Planned |
-| 7 | Linux system integration | ⬜ Planned |
-| 8 | Voice interface (whisper.cpp) | ⬜ Planned |
-| 9 | Terminal UI (ratatui) + Desktop UI (Tauri) | ⬜ Planned |
-| 10 | Linux distribution packaging | ⬜ Planned |
+| 4 | Hybrid search (Tantivy + cosine similarity) | ✅ Done |
+| 5 | Memory system (cross-session learning) | ✅ Done |
+| 6 | Filesystem watcher + always-on daemon | 🔄 Next |
+| 7 | Pattern learning + proactive insights | ⬜ Planned |
+| 8 | Tauri overlay (system tray + global hotkey) | ⬜ Planned |
+| 9 | Voice interface (whisper.cpp) | ⬜ Planned |
+| 10 | Linux system integration + distribution | ⬜ Planned |
 
 ---
 
-## 30-Day Milestone
+## 30-Day Milestone — ✅ Achieved
 
 > *"Find the document where I discussed Formula Student."*
 
-AIOS should search indexed documents, identify relevant files, summarize findings, and open the selected document. This single demo proves local AI integration, file indexing, semantic search, and real-world usefulness — all running offline.
+AIOS searches indexed documents, identifies relevant files, summarizes findings, and answers from content — all running fully offline. Demonstrated with real documents including IELTS results, nutrition guides, and project notes.
 
 ---
 
 ## Architecture
+
+```
 aios/
-
 ├── crates/
-
 │   ├── shared        # Core types and structs
-
 │   ├── memory        # SQLite database layer + migrations
-
 │   ├── document      # File parsing and chunking (PDF, DOCX, TXT)
-
 │   ├── embeddings    # Vector generation via Ollama
-
-│   ├── search        # Tantivy keyword + semantic search
-
+│   ├── search        # Tantivy keyword + cosine similarity search
 │   ├── models        # Ollama LLM client with streaming
+│   ├── assistant     # Orchestration — context, memory, search injection
+│   ├── system        # Linux system integration (planned)
+│   ├── voice         # whisper.cpp voice interface (planned)
+│   ├── api           # HTTP API layer (planned)
+│   ├── ui-tui        # Terminal REPL (current)
+│   └── ui-desktop    # Tauri + egui desktop UI (planned)
+```
 
-│   ├── assistant     # Orchestration layer
+---
 
-│   ├── system        # Linux system integration
+## How It Works
 
-│   ├── voice         # whisper.cpp voice interface
+```
+You ask a question
+       ↓
+Load memories from past sessions
+       ↓
+Embed query → cosine similarity over stored vectors
+       ↓
+Tantivy keyword search over indexed chunks
+       ↓
+Merge results → top 5 most relevant chunks
+       ↓
+Inject chunks + memories into system prompt
+       ↓
+Stream response from local LLM (Ollama)
+       ↓
+Extract new facts → store as memories
+```
 
-│   ├── api           # HTTP API layer
-
-│   ├── ui-tui        # Terminal interface (ratatui)
-
-│   └── ui-desktop    # Desktop interface (Tauri + egui)
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-
 | Language | Rust |
-
 | Async runtime | Tokio |
-
 | LLM backend | Ollama (llama3.2) |
-
 | Embeddings | Ollama (nomic-embed-text) |
-
 | Database | SQLite via rusqlite |
-
-| Search | Tantivy |
-
-| Voice | whisper.cpp |
-
-| Terminal UI | ratatui |
-
-| Desktop UI | Tauri + egui |
+| Full-text search | Tantivy |
+| Voice | whisper.cpp (planned) |
+| Terminal UI | ratatui (planned) |
+| Desktop UI | Tauri + egui (planned) |
 
 ---
 
@@ -108,7 +114,7 @@ aios/
 ```bash
 git clone https://github.com/yourusername/aios.git
 cd aios
-
+```
 
 **2. Pull the required models**
 ```bash
@@ -133,8 +139,11 @@ cargo run -p aios-ui-tui
 ```
 > hello                                    # chat with the assistant
 > /index /path/to/file.pdf                 # index a single file
-> /index-dir /path/to/folder               # index an entire directory
+> /index-dir /path/to/folder               # index a directory
 > /embed <document-uuid>                   # embed a document's chunks
+> /memories                                # list what AIOS knows about you
+> /remember key = value                    # store a fact manually
+> /forget key                              # delete a memory
 > /quit                                    # exit
 ```
 
@@ -142,7 +151,9 @@ cargo run -p aios-ui-tui
 
 ## Vision
 
-AIOS is the first step toward an assistant-first operating system. The long-term goal is a full Linux distribution where the AI assistant is the primary interface — no desktop, no file manager, no application launcher. Just you and your system, in conversation.
+AIOS is the first step toward an assistant-first operating system. The long-term goal is a full Linux distribution where the AI assistant is the primary interface — always running, always learning, always aware of your work. No desktop, no file manager, no application launcher. Just you and your system, in conversation.
+
+Think Gideon from The Flash. Think JARVIS before the suit.
 
 ---
 
@@ -150,5 +161,3 @@ AIOS is the first step toward an assistant-first operating system. The long-term
 
 MIT
 EOF
-
-echo "README.md created"
