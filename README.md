@@ -46,18 +46,31 @@ AIOS searches indexed documents, identifies relevant files, summarizes findings,
 
 
 aios/
+
 ├── crates/
+
 │   ├── shared        # Core types and structs
+
 │   ├── memory        # SQLite database layer + migrations
+
 │   ├── document      # File parsing and chunking (PDF, DOCX, TXT)
+
 │   ├── embeddings    # Vector generation via Ollama
+
 │   ├── search        # Tantivy keyword + cosine similarity search
+
 │   ├── models        # Ollama LLM client with streaming
+
 │   ├── assistant     # Orchestration — context, memory, search injection
+
 │   ├── system        # Linux system integration (planned)
+
 │   ├── voice         # whisper.cpp voice interface (planned)
+
 │   ├── api           # HTTP API layer (planned)
+
 │   ├── ui-tui        # Terminal REPL (current)
+
 │   └── ui-desktop    # Tauri + egui desktop UI (planned)
 
 
