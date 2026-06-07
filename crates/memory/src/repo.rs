@@ -26,6 +26,41 @@ impl Database {
         )?;
         Ok(conv)
     }
+    pub fn list_memories(&self) -> Result<Vec<(String, String, Option<String>)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT key, value, source FROM memories ORDER BY updated_at DESC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        })?;
+        rows.map(|r| Ok(r?)).collect()
+    }
+
+    pub fn delete_memory(&self, key: &str) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM memories WHERE key = ?1",
+            rusqlite::params![key],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_all_memories(&self) -> Result<Vec<(String, String)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT key, value FROM memories ORDER BY updated_at DESC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+            ))
+        })?;
+        rows.map(|r| Ok(r?)).collect()
+    }
+
     pub fn store_embedding(
         &self,
         chunk_id: uuid::Uuid,

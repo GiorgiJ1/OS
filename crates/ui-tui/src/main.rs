@@ -125,6 +125,45 @@ async fn main() -> Result<()> {
             continue;
         }
 
+        if input == "/memories" {
+            match assistant.db().list_memories() {
+                Ok(mems) if mems.is_empty() => println!("No memories stored yet."),
+                Ok(mems) => {
+                    println!("Stored memories:");
+                    for (key, value, source) in &mems {
+                        println!(
+                            "  {} = {} ({})",
+                            key,
+                            value,
+                            source.as_deref().unwrap_or("unknown")
+                        );
+                    }
+                }
+                Err(e) => println!("Error: {}", e),
+            }
+            continue;
+        }
+
+        if let Some(rest) = input.strip_prefix("/remember ") {
+            if let Some((key, value)) = rest.split_once('=') {
+                match assistant.db().set_memory(key.trim(), value.trim(), Some("user")) {
+                    Ok(_) => println!("Remembered: {} = {}", key.trim(), value.trim()),
+                    Err(e) => println!("Error: {}", e),
+                }
+            } else {
+                println!("Usage: /remember key = value");
+            }
+            continue;
+        }
+
+        if let Some(key) = input.strip_prefix("/forget ") {
+            match assistant.db().delete_memory(key.trim()) {
+                Ok(_) => println!("Forgotten: {}", key.trim()),
+                Err(e) => println!("Error: {}", e),
+            }
+            continue;
+        }
+
         // Normal chat with document context
         let (tx, mut rx) = mpsc::channel::<String>(64);
 
