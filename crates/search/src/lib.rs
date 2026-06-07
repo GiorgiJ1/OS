@@ -1,2 +1,6 @@
-// Phase 4 — Tantivy search engine
-pub fn placeholder() {}
+pub mod keyword;
+pub mod semantic;
+pub mod engine;
+
+pub use engine::SearchEngine;
+pub use engine::SearchResult;

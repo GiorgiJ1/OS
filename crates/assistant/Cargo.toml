@@ -7,6 +7,8 @@ edition.workspace = true
 aios-shared           = { path = "../shared" }
 aios-memory           = { path = "../memory" }
 aios-models           = { path = "../models" }
+aios-search     = { path = "../search" }
+aios-embeddings = { path = "../embeddings" }
 anyhow.workspace      = true
 thiserror.workspace   = true
 serde.workspace       = true

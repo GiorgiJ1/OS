@@ -47,8 +47,10 @@ dependencies = [
 name = "aios-assistant"
 version = "0.1.0"
 dependencies = [
+ "aios-embeddings",
  "aios-memory",
  "aios-models",
+ "aios-search",
  "aios-shared",
  "anyhow",
  "async-trait",
@@ -136,9 +138,13 @@ dependencies = [
  "aios-memory",
  "aios-shared",
  "anyhow",
+ "serde",
+ "serde_json",
  "tantivy",
+ "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -184,6 +190,7 @@ dependencies = [
  "aios-document",
  "aios-embeddings",
  "aios-memory",
+ "aios-search",
  "aios-shared",
  "anyhow",
  "serde",

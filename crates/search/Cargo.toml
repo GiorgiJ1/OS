@@ -4,10 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-aios-shared       = { path = "../shared" }
-aios-memory       = { path = "../memory" }
-aios-embeddings   = { path = "../embeddings" }
-anyhow.workspace  = true
-tracing.workspace = true
-tokio.workspace   = true
-tantivy           = "0.22"
+aios-shared         = { path = "../shared" }
+aios-memory         = { path = "../memory" }
+aios-embeddings     = { path = "../embeddings" }
+anyhow.workspace    = true
+thiserror.workspace = true
+tracing.workspace   = true
+tokio.workspace     = true
+serde.workspace     = true
+serde_json.workspace = true
+uuid.workspace      = true
+tantivy             = "0.22"

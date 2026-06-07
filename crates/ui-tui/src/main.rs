@@ -1,10 +1,11 @@
 use anyhow::Result;
 use aios_assistant::Assistant;
+use aios_document::Ingestor;
+use aios_embeddings::EmbeddingEngine;
 use aios_memory::Database;
 use std::io::{self, BufRead, Write};
 use tokio::sync::mpsc;
 use tracing::info;
-use aios_embeddings::EmbeddingEngine;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,7 +29,6 @@ async fn main() -> Result<()> {
     info!("Opening database at {}", db_path);
     let db = Database::open(&db_path)?;
     let assistant = Assistant::with_defaults(db)?;
-    let ingestor = aios_document::Ingestor::new(assistant.db());
     let embedder = EmbeddingEngine::with_defaults()?;
 
     if !assistant.is_ready().await {
@@ -38,7 +38,11 @@ async fn main() -> Result<()> {
 
     let conv = assistant.new_conversation(Some("AIOS session"))?;
     println!("AIOS ready. Conversation: {}", conv.id);
-    println!("Type your message and press Enter. /quit to exit.\n");
+    println!("Commands:");
+    println!("  /index <path>       — index a file");
+    println!("  /index-dir <path>   — index a directory");
+    println!("  /embed <doc-uuid>   — embed a document's chunks");
+    println!("  /quit               — exit\n");
 
     let stdin = io::stdin();
     loop {
@@ -53,25 +57,57 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        // Built-in commands
         if input == "/quit" || input == "/exit" {
             break;
         }
 
         if let Some(path) = input.strip_prefix("/index ") {
             let path = std::path::Path::new(path.trim());
+            let ingestor = Ingestor::new(assistant.db());
             match ingestor.ingest_file(path) {
-                Ok(doc) => println!("Indexed: {:?} ({})", doc.title, doc.id),
-                Err(e)  => println!("Error: {}", e),
+                Ok(doc) => {
+                    println!("Indexed: {:?} ({})", doc.title, doc.id);
+                    // Auto-embed and auto-index into Tantivy
+                    println!("Embedding chunks...");
+                    match embedder.embed_document_chunks(assistant.db(), doc.id).await {
+                        Ok(n) => {
+                            println!("Embedded {} chunks", n);
+                            // Index chunks into Tantivy
+                            let chunks = assistant.db().get_chunks_for_document(doc.id)?;
+                            for chunk in &chunks {
+                                assistant.search_engine().index_chunk(chunk.id, &chunk.content)?;
+                            }
+                            println!("Search index updated. Document ready to query.");
+                        }
+                        Err(e) => println!("Embedding error: {}", e),
+                    }
+                }
+                Err(e) => println!("Error: {}", e),
             }
             continue;
         }
 
         if let Some(dir) = input.strip_prefix("/index-dir ") {
             let path = std::path::Path::new(dir.trim());
+            let ingestor = Ingestor::new(assistant.db());
             match ingestor.ingest_directory(path) {
-                Ok(docs) => println!("Indexed {} files", docs.len()),
-                Err(e)   => println!("Error: {}", e),
+                Ok(docs) => {
+                    println!("Indexed {} files", docs.len());
+                    for doc in &docs {
+                        match embedder.embed_document_chunks(assistant.db(), doc.id).await {
+                            Ok(n) => {
+                                let chunks = assistant.db().get_chunks_for_document(doc.id)?;
+                                for chunk in &chunks {
+                                    assistant.search_engine().index_chunk(chunk.id, &chunk.content)?;
+                                }
+                                println!("  {:?} — {} chunks embedded", doc.title, n);
+                            }
+                            Err(e) => println!("  {:?} — embedding error: {}", doc.title, e),
+                        }
+                    }
+                    println!("All documents ready to query.");
+                }
+                Err(e) => println!("Error: {}", e),
             }
             continue;
         }
@@ -80,23 +116,23 @@ async fn main() -> Result<()> {
             match uuid::Uuid::parse_str(id_str.trim()) {
                 Ok(doc_id) => {
                     match embedder.embed_document_chunks(assistant.db(), doc_id).await {
-                        Ok(n)  => println!("Embedded {} chunks", n),
+                        Ok(n) => println!("Embedded {} chunks", n),
                         Err(e) => println!("Error: {}", e),
                     }
                 }
                 Err(_) => println!("Usage: /embed <document-uuid>"),
-        }
+            }
             continue;
         }
 
-        // Normal chat
+        // Normal chat with document context
         let (tx, mut rx) = mpsc::channel::<String>(64);
 
         print!("AIOS: ");
         io::stdout().flush()?;
 
         tokio::select! {
-            result = assistant.chat_stream(conv.id, &input, tx) => {
+            result = assistant.chat_stream_with_context(conv.id, &input, tx) => {
                 result?;
             }
             _ = async {
