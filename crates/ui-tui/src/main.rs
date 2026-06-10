@@ -10,6 +10,7 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
     tracing_subscriber::fmt()
         .with_env_filter(
             std::env::var("RUST_LOG")
@@ -19,9 +20,9 @@ async fn main() -> Result<()> {
         .init();
 
     let data_dir = std::env::var("AIOS_DATA_DIR").unwrap_or_else(|_| {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".to_string());
+        let home = std::env::var("USERPROFILE")
+            .or_else(|_| std::env::var("HOME"))
+            .unwrap_or_else(|_| "C:\\Users\\giogu".to_string());
         format!("{}/.local/share/aios", home)
     });
     std::fs::create_dir_all(&data_dir)?;
@@ -52,52 +53,69 @@ async fn main() -> Result<()> {
     // Spawn background thread for file watching + indexing
     let db_path_bg = db_path.clone();
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("background runtime");
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("background runtime");
 
-        rt.block_on(async move {
-            let db = Database::open(&db_path_bg).expect("db open");
-            let embedder = EmbeddingEngine::with_defaults().expect("embedder");
-            let mut pattern_tick = tokio::time::interval(
-                tokio::time::Duration::from_secs(300)
-            );
+    rt.block_on(async move {
+        let db = Database::open(&db_path_bg).expect("db open");
+        let embedder = EmbeddingEngine::with_defaults().expect("embedder");
 
-            loop {
-                tokio::select! {
-                    Some(event) = file_rx.recv() => {
-                        match &event {
-                            aios_system::watcher::FileEvent::Created(path)
-                            | aios_system::watcher::FileEvent::Modified(path) => {
-                                {
-                                    let activity = ActivityTracker::new(&db);
-                                    activity.log_file_event(path, "modified").ok();
-                                }
-                                let ingestor = aios_document::Ingestor::new(&db);
-                                if let Ok(doc) = ingestor.ingest_file(path) {
-                                    if let Ok(n) = embedder.embed_document_chunks(&db, doc.id).await {
-                                        tracing::info!(
-                                            "Auto-indexed: {:?} ({} chunks)",
-                                            doc.title, n
-                                        );
-                                    }
-                                }
-                            }
-                            aios_system::watcher::FileEvent::Deleted(path) => {
+        // SearchEngine for the background thread
+        let data_dir = std::env::var("AIOS_DATA_DIR").unwrap_or_else(|_| {
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| ".".to_string());
+            format!("{}/.local/share/aios", home)
+        });
+        let index_path = format!("{}/tantivy", data_dir);
+        let search = aios_search::SearchEngine::new(&index_path).expect("search engine");
+
+        let mut pattern_tick = tokio::time::interval(
+            tokio::time::Duration::from_secs(300)
+        );
+
+        loop {
+            tokio::select! {
+                Some(event) = file_rx.recv() => {
+                    match &event {
+                        aios_system::watcher::FileEvent::Created(path)
+                        | aios_system::watcher::FileEvent::Modified(path) => {
+                            {
                                 let activity = ActivityTracker::new(&db);
-                                activity.log_file_event(path, "deleted").ok();
+                                activity.log_file_event(path, "modified").ok();
+                            }
+                            let ingestor = aios_document::Ingestor::new(&db);
+                            if let Ok(doc) = ingestor.ingest_file(path) {
+                                if let Ok(_) = embedder.embed_document_chunks(&db, doc.id).await {
+                                    // Also index into Tantivy
+                                    if let Ok(chunks) = db.get_chunks_for_document(doc.id) {
+                                        for chunk in &chunks {
+                                            search.index_chunk(chunk.id, &chunk.content).ok();
+                                        }
+                                    }
+                                    tracing::info!(
+                                        "Auto-indexed + search updated: {:?}",
+                                        doc.title
+                                    );
+                                }
                             }
                         }
-                    }
-                    _ = pattern_tick.tick() => {
-                        let patterns = PatternEngine::new(&db);
-                        patterns.analyse_and_store().ok();
+                        aios_system::watcher::FileEvent::Deleted(path) => {
+                            let activity = ActivityTracker::new(&db);
+                            activity.log_file_event(path, "deleted").ok();
+                        }
                     }
                 }
+                _ = pattern_tick.tick() => {
+                    let patterns = PatternEngine::new(&db);
+                    patterns.analyse_and_store().ok();
+                }
             }
-        });
+        }
     });
+});
 
 println!("Filesystem watcher active on D:\\ and G:\\");
 

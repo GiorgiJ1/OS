@@ -43,15 +43,20 @@ impl Assistant {
         self.db.create_conversation(title)
     }
 
-    /// Build the system prompt from memories + document context.
+        /// Build the system prompt from memories + document context.
     fn build_system_prompt(
         &self,
         memories: &[(String, String)],
         context:  &str,
     ) -> String {
         let mut system = String::from(
-            "You are AIOS, an AI assistant integrated into the user's operating system. \
-             You have access to the user's documents and remember facts across sessions.\n\n"
+            "You are AIOS, a personal AI assistant running locally on the user's machine. \
+            You have already read and indexed the user's files. \
+            The content below labeled 'Content from the user's files' IS the actual text \
+            extracted directly from those files — it is already loaded into this conversation. \
+            When the user asks about a file, read the content provided below and report it. \
+            Do not say you cannot access files. The file content is right here in this prompt. \
+            Always answer directly from the provided content.\n\n"
         );
 
         if !memories.is_empty() {
@@ -63,13 +68,13 @@ impl Assistant {
         }
 
         if !context.is_empty() {
-            system.push_str("Relevant context from documents:\n\n");
+            system.push_str("Content from the user's files (already extracted and loaded):\n\n");
             system.push_str(context);
+            system.push_str("\n\nAnswer based on the above content. It is real file content.\n");
         }
 
         system
     }
-
     /// Extract key facts from the conversation and store them as memories.
     async fn extract_and_store_memories(
         &self,
