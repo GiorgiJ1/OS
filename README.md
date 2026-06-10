@@ -26,8 +26,8 @@ This project is in active early development. The table below reflects the curren
 | 3 | Embedding engine (nomic-embed-text) | ✅ Done |
 | 4 | Hybrid search (Tantivy + cosine similarity) | ✅ Done |
 | 5 | Memory system (cross-session learning) | ✅ Done |
-| 6 | Filesystem watcher + always-on daemon | 🔄 Next |
-| 7 | Pattern learning + proactive insights | ⬜ Planned |
+| 6 | Filesystem watcher + always-on daemon | ✅ Done|
+| 7 | Pattern learning + proactive insights | ✅ Done|
 | 8 | Tauri overlay (system tray + global hotkey) | ⬜ Planned |
 | 9 | Voice interface (whisper.cpp) | ⬜ Planned |
 | 10 | Linux system integration + distribution | ⬜ Planned |
