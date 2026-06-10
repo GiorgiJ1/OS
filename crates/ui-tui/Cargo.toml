@@ -8,6 +8,7 @@ name = "aios"
 path = "src/main.rs"
 
 [dependencies]
+aios-system = { path = "../system" }
 aios-shared        = { path = "../shared" }
 aios-assistant     = { path = "../assistant" }
 aios-memory        = { path = "../memory" }

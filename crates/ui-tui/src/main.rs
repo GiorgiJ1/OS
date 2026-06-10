@@ -1,4 +1,5 @@
 use anyhow::Result;
+use aios_system::{FilesystemWatcher, ActivityTracker, PatternEngine};
 use aios_assistant::Assistant;
 use aios_document::Ingestor;
 use aios_embeddings::EmbeddingEngine;
@@ -43,6 +44,62 @@ async fn main() -> Result<()> {
     println!("  /index-dir <path>   — index a directory");
     println!("  /embed <doc-uuid>   — embed a document's chunks");
     println!("  /quit               — exit\n");
+            // Start filesystem watcher
+    // Start filesystem watcher
+    let watcher = FilesystemWatcher::with_default_drives();
+    let mut file_rx = watcher.start()?;
+
+    // Spawn background thread for file watching + indexing
+    let db_path_bg = db_path.clone();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("background runtime");
+
+        rt.block_on(async move {
+            let db = Database::open(&db_path_bg).expect("db open");
+            let embedder = EmbeddingEngine::with_defaults().expect("embedder");
+            let mut pattern_tick = tokio::time::interval(
+                tokio::time::Duration::from_secs(300)
+            );
+
+            loop {
+                tokio::select! {
+                    Some(event) = file_rx.recv() => {
+                        match &event {
+                            aios_system::watcher::FileEvent::Created(path)
+                            | aios_system::watcher::FileEvent::Modified(path) => {
+                                {
+                                    let activity = ActivityTracker::new(&db);
+                                    activity.log_file_event(path, "modified").ok();
+                                }
+                                let ingestor = aios_document::Ingestor::new(&db);
+                                if let Ok(doc) = ingestor.ingest_file(path) {
+                                    if let Ok(n) = embedder.embed_document_chunks(&db, doc.id).await {
+                                        tracing::info!(
+                                            "Auto-indexed: {:?} ({} chunks)",
+                                            doc.title, n
+                                        );
+                                    }
+                                }
+                            }
+                            aios_system::watcher::FileEvent::Deleted(path) => {
+                                let activity = ActivityTracker::new(&db);
+                                activity.log_file_event(path, "deleted").ok();
+                            }
+                        }
+                    }
+                    _ = pattern_tick.tick() => {
+                        let patterns = PatternEngine::new(&db);
+                        patterns.analyse_and_store().ok();
+                    }
+                }
+            }
+        });
+    });
+
+println!("Filesystem watcher active on D:\\ and G:\\");
 
     let stdin = io::stdin();
     loop {

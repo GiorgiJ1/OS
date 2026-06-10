@@ -5,7 +5,17 @@ edition.workspace = true
 
 [dependencies]
 aios-shared      = { path = "../shared" }
+aios-memory      = { path = "../memory" }
+aios-document    = { path = "../document" }
+aios-embeddings  = { path = "../embeddings" }
+aios-search      = { path = "../search" }
 anyhow.workspace = true
 tracing.workspace = true
 tokio.workspace  = true
-sysinfo          = "0.30"
+serde.workspace  = true
+serde_json.workspace = true
+uuid.workspace   = true
+chrono.workspace = true
+rusqlite.workspace = true
+notify           = "6"
+walkdir          = "2"

@@ -71,3 +71,14 @@ CREATE TABLE IF NOT EXISTS memories (
     updated_at TEXT NOT NULL,
     UNIQUE(key)
 );
+
+CREATE TABLE IF NOT EXISTS file_activity (
+    path        TEXT NOT NULL,
+    extension   TEXT NOT NULL,
+    event_type  TEXT NOT NULL,
+    last_seen   TEXT NOT NULL,
+    count       INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (path, event_type)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_last_seen ON file_activity(last_seen);
+CREATE INDEX IF NOT EXISTS idx_activity_path ON file_activity(path);
