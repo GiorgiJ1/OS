@@ -4,8 +4,22 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-aios-shared       = { path = "../shared" }
-aios-assistant    = { path = "../assistant" }
-anyhow.workspace  = true
-tracing.workspace = true
-tokio.workspace   = true
+aios-shared     = { path = "../shared" }
+aios-assistant  = { path = "../assistant" }
+aios-memory     = { path = "../memory" }
+aios-document   = { path = "../document" }
+aios-embeddings = { path = "../embeddings" }
+aios-search     = { path = "../search" }
+aios-system     = { path = "../system" }
+anyhow.workspace    = true
+tracing.workspace   = true
+tracing-subscriber  = { version = "0.3", features = ["env-filter"] }
+tokio.workspace     = true
+serde.workspace     = true
+serde_json.workspace = true
+uuid.workspace      = true
+dotenvy             = "0.15"
+tauri               = { version = "2", features = ["tray-icon", "image-png"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

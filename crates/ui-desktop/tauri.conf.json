@@ -1,0 +1,39 @@
+{
+  "productName": "AIOS",
+  "version": "0.1.0",
+  "identifier": "dev.aios.desktop",
+  "build": {
+    "frontendDist": "./src-frontend"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "duck",
+        "title": "AIOS",
+        "width": 400,
+        "height": 500,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "x": 1050,
+        "y": 250,
+        "devtools": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ]
+  }
+}

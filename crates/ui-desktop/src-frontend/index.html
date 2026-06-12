@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+    font-family: monospace;
+    width: 400px;
+    height: 500px;
+  }
+
+  #duck-wrap {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    cursor: pointer;
+    width: 96px;
+    height: 96px;
+  }
+
+  canvas {
+    image-rendering: pixelated;
+    width: 96px;
+    height: 96px;
+    display: block;
+  }
+
+  #chat {
+    display: none;
+    position: absolute;
+    bottom: 112px;
+    left: 8px;
+    width: 384px;
+    background: rgba(10, 10, 25, 0.95);
+    border: 1px solid #534AB7;
+    border-radius: 12px;
+    padding: 12px;
+    color: #e0e0ff;
+    font-size: 13px;
+  }
+
+  #chat.open { display: block; }
+
+  #chat-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #534AB7;
+  }
+
+  #state-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #1D9E75;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+
+  #state-dot.thinking { background: #EF9F27; }
+  #state-dot.alert    { background: #E24B4A; }
+
+  #close-btn {
+    margin-left: auto;
+    cursor: pointer;
+    font-size: 15px;
+    color: #534AB7;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+
+  #close-btn:hover { color: #7F77DD; }
+
+  #msgs {
+    height: 260px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+    line-height: 1.7;
+    scrollbar-width: thin;
+    scrollbar-color: #534AB7 transparent;
+  }
+
+  .msg-u {
+    color: #9FE1CB;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .msg-u::before { content: "you › "; opacity: 0.5; }
+
+  .msg-a {
+    color: #e0e0ff;
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .msg-a::before { content: "🦆 "; }
+
+  #input-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  #inp {
+    flex: 1;
+    background: #0a0a1a;
+    border: 1px solid #534AB7;
+    border-radius: 6px;
+    color: #e0e0ff;
+    padding: 7px 10px;
+    font-family: monospace;
+    font-size: 12px;
+    outline: none;
+  }
+
+  #inp:focus { border-color: #9FE1CB; }
+
+  #send-btn {
+    background: #534AB7;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  #send-btn:hover { background: #7F77DD; }
+
+  #duck-label {
+    position: absolute;
+    bottom: 8px;
+    left: 112px;
+    color: #534AB7;
+    font-size: 11px;
+    font-family: monospace;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="duck-wrap" onclick="toggleChat()" title="Click to chat with AIOS">
+  <canvas id="c" width="16" height="16"></canvas>
+</div>
+
+<span id="duck-label">click me</span>
+
+<div id="chat">
+  <div id="chat-header">
+    <div id="state-dot"></div>
+    <span id="state-text">AIOS ready</span>
+    <span id="close-btn" onclick="toggleChat()">✕</span>
+  </div>
+  <div id="msgs"></div>
+  <div id="input-row">
+    <input id="inp" type="text" placeholder="ask anything..."
+           autocomplete="off"
+           onkeydown="if(event.key==='Enter') send()"/>
+    <button id="send-btn" onclick="send()">→</button>
+  </div>
+</div>
+
+<script>
+// ── Pixel duck ────────────────────────────────────────────────────────────────
+const P = [null,'#F5C842','#E8871A','#FFFFFF','#111111','#5DCAA5'];
+
+const FRAMES = {
+  idle: [
+    ['0000011100000000','0000111110000000','0000111410000000','0000111110000000',
+     '0022111111100000','0021111111110000','0011113311110000','0011113311100000',
+     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
+     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
+    ['0000000000000000','0000011100000000','0000111110000000','0000111410000000',
+     '0022111111000000','0021111111100000','0011113311110000','0011113311100000',
+     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
+     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
+  ],
+  thinking: [
+    ['0000011100000000','0000111110000000','0000111410000000','0000111110000000',
+     '0022011111100000','0020111111110000','0011113311110000','0011113311100000',
+     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
+     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
+    ['0000011100000000','0000111110000000','0000111410000000','0000111110000000',
+     '0022111111100000','0021111111110000','0011133311110000','0011333311100000',
+     '0001331111000000','0000111110000000','0000011100000000','0000022000000000',
+     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
+  ],
+  alert: [
+    ['0000011100000000','0000111110000000','0000111410000000','0022111111100000',
+     '0021111111110000','0011113311110000','0011113311100000','0001111111000000',
+     '0000111110000000','0000011100000000','0000022000000000','0000222000000000',
+     '0000000000000000','0000000000000000','0000000000000000','0000000000000000'],
+    ['0000000000000000','0000011100000000','0000111110000000','0000111410000000',
+     '0022111111100000','0021111111110000','0011113311110000','0011113311100000',
+     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
+     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
+  ],
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let duckState = 'idle';
+let frameIdx = 0;
+const speed = { idle: 700, thinking: 250, alert: 150 };
+
+function drawDuck() {
+  const frames = FRAMES[duckState];
+  const f = frames[frameIdx % frames.length];
+  ctx.clearRect(0, 0, 16, 16);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const c = parseInt(f[y][x]);
+      if (c === 0) continue;
+      ctx.fillStyle = P[c];
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  frameIdx++;
+  setTimeout(drawDuck, speed[duckState]);
+}
+
+drawDuck();
+
+// ── Chat UI ───────────────────────────────────────────────────────────────────
+function toggleChat() {
+  const chat = document.getElementById('chat');
+  chat.classList.toggle('open');
+  const label = document.getElementById('duck-label');
+  if (chat.classList.contains('open')) {
+    label.style.display = 'none';
+    setTimeout(() => document.getElementById('inp').focus(), 50);
+  } else {
+    label.style.display = 'block';
+  }
+}
+
+function addMsg(cls, text) {
+  const msgs = document.getElementById('msgs');
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = text;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+function setState(s) {
+  duckState = s;
+  frameIdx = 0;
+  const dot  = document.getElementById('state-dot');
+  const text = document.getElementById('state-text');
+  dot.className = s === 'idle' ? '' : s;
+  text.textContent = s === 'thinking' ? 'thinking...'
+                   : s === 'alert'    ? 'hey, got something for you'
+                   : 'AIOS ready';
+}
+
+async function send() {
+  const inp  = document.getElementById('inp');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+
+  addMsg('msg-u', text);
+  setState('thinking');
+
+  const msgs   = document.getElementById('msgs');
+  const respEl = document.createElement('div');
+  respEl.className = 'msg-a';
+  msgs.appendChild(respEl);
+
+  try {
+    await window.__TAURI__.core.invoke('send_message', { message: text });
+  } catch(e) {
+    respEl.textContent = 'Error: ' + e;
+    setState('idle');
+  }
+}
+
+// ── Tauri event listeners ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!window.__TAURI__) {
+    console.warn('Tauri not available — running in browser mode');
+    return;
+  }
+
+  const { listen } = window.__TAURI__.event;
+
+  await listen('aios-state', e => setState(e.payload));
+
+  await listen('aios-response-chunk', e => {
+    const msgs = document.getElementById('msgs');
+    let last   = msgs.querySelector('.msg-a:last-child');
+    if (!last) {
+      last = document.createElement('div');
+      last.className = 'msg-a';
+      msgs.appendChild(last);
+    }
+    last.textContent += e.payload;
+    msgs.scrollTop = msgs.scrollHeight;
+  });
+
+  await listen('aios-response-done', () => setState('idle'));
+});
+</script>
+</body>
+</html>
