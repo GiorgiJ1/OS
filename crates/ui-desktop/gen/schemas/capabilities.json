@@ -1,1 +1,1 @@
-{}
+{"main-capability":{"identifier":"main-capability","description":"Main window capabilities","local":true,"windows":["duck"],"permissions":["core:default","core:event:default","core:window:default","core:app:default","core:tray:default"]}}
