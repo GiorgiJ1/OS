@@ -3,13 +3,12 @@
 use aios_assistant::Assistant;
 use aios_memory::Database;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, State};
-use tokio::sync::mpsc;
-use tracing::info;
+use tauri::{AppHandle, Emitter, Manager, State};
+use uuid::Uuid;
 
 struct AppState {
     db_path:         String,
-    conversation_id: Mutex<uuid::Uuid>,
+    conversation_id: Mutex<Uuid>,
 }
 
 #[tauri::command]
@@ -18,13 +17,12 @@ async fn send_message(
     state:   State<'_, Arc<AppState>>,
     app:     AppHandle,
 ) -> Result<(), String> {
-    let conv_id  = *state.conversation_id.lock().unwrap();
-    let db_path  = state.db_path.clone();
-    let app2     = app.clone();
+    let conv_id = *state.conversation_id.lock().unwrap();
+    let db_path = state.db_path.clone();
+    let app2    = app.clone();
 
     app.emit("aios-state", "thinking").ok();
 
-    // Spawn a dedicated thread — rusqlite is not Send
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -41,7 +39,6 @@ async fn send_message(
                     return;
                 }
             };
-
             let assistant = match Assistant::with_defaults(db) {
                 Ok(a)  => a,
                 Err(e) => {
@@ -52,9 +49,7 @@ async fn send_message(
                 }
             };
 
-            let (tx, mut rx) = mpsc::channel::<String>(64);
-
-            // Forward tokens to frontend
+            let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(64);
             let app3 = app2.clone();
             tokio::spawn(async move {
                 while let Some(token) = rx.recv().await {
@@ -64,9 +59,7 @@ async fn send_message(
 
             match assistant.chat_stream_with_context(conv_id, &message, tx).await {
                 Ok(_)  => {}
-                Err(e) => {
-                    app2.emit("aios-response-chunk", format!("Error: {}", e)).ok();
-                }
+                Err(e) => { app2.emit("aios-response-chunk", format!("Error: {}", e)).ok(); }
             }
 
             app2.emit("aios-response-done", ()).ok();
@@ -75,6 +68,45 @@ async fn send_message(
     });
 
     Ok(())
+}
+
+#[tauri::command]
+async fn toggle_chat(duck_x: i32, duck_y: i32, app: AppHandle) -> Result<(), String> {
+    if let Some(chat) = app.get_webview_window("chat") {
+        if chat.is_visible().unwrap_or(false) {
+            chat.hide().map_err(|e| e.to_string())?;
+        } else {
+            // Position chat above the duck
+            let chat_y = (duck_y - 510).max(0);
+            let chat_x = duck_x.max(0).min(1520);
+            chat.set_position(tauri::PhysicalPosition::new(chat_x, chat_y))
+                .map_err(|e| e.to_string())?;
+            chat.show().map_err(|e| e.to_string())?;
+            chat.set_focus().map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn move_window(x: i32, y: i32, app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("duck") {
+        window.set_position(tauri::PhysicalPosition::new(x, y))
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_screen_size(app: AppHandle) -> Result<(u32, u32), String> {
+    if let Some(window) = app.get_webview_window("duck") {
+        let monitor = window.current_monitor()
+            .map_err(|e| e.to_string())?
+            .ok_or("no monitor")?;
+        let size = monitor.size();
+        return Ok((size.width, size.height));
+    }
+    Ok((1920, 1080))
 }
 
 fn main() {
@@ -90,15 +122,11 @@ fn main() {
     std::fs::create_dir_all(&data_dir).ok();
     let db_path = format!("{}/aios.db", data_dir);
 
-    // Get or create a conversation id for this session
     let conv_id = {
-        let db = Database::open(&db_path).expect("db open");
+        let db        = Database::open(&db_path).expect("db open");
         let assistant = Assistant::with_defaults(db).expect("assistant");
-        let conv = assistant
-            .new_conversation(Some("desktop session"))
-            .expect("conv");
-        info!("Desktop session: {}", conv.id);
-        conv.id
+        assistant.new_conversation(Some("desktop session"))
+            .expect("conv").id
     };
 
     let state = Arc::new(AppState {
@@ -108,7 +136,12 @@ fn main() {
 
     tauri::Builder::default()
         .manage(state)
-        .invoke_handler(tauri::generate_handler![send_message])
+        .invoke_handler(tauri::generate_handler![
+            send_message,
+            toggle_chat,
+            move_window,
+            get_screen_size,
+        ])
         .run(tauri::generate_context!())
         .expect("tauri error");
 }

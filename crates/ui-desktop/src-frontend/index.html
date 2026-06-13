@@ -4,43 +4,45 @@
 <meta charset="UTF-8"/>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
     background: transparent;
     overflow: hidden;
-    user-select: none;
+    width: 420px;
+    height: 520px;
     font-family: monospace;
-    width: 400px;
-    height: 500px;
+    user-select: none;
   }
 
   #duck-wrap {
     position: absolute;
-    bottom: 8px;
-    left: 8px;
+    bottom: 10px;
+    left: 10px;
     cursor: pointer;
-    width: 96px;
-    height: 96px;
+    width: 80px;
+    height: 80px;
   }
 
   canvas {
     image-rendering: pixelated;
-    width: 96px;
-    height: 96px;
+    width: 80px;
+    height: 80px;
     display: block;
   }
 
   #chat {
     display: none;
     position: absolute;
-    bottom: 112px;
+    bottom: 100px;
     left: 8px;
-    width: 384px;
-    background: rgba(10, 10, 25, 0.95);
+    width: 400px;
+    background: rgba(8, 8, 20, 0.96);
     border: 1px solid #534AB7;
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 14px;
+    padding: 14px;
     color: #e0e0ff;
     font-size: 13px;
+    box-shadow: 0 0 30px rgba(83,74,183,0.3);
   }
 
   #chat.open { display: block; }
@@ -48,9 +50,11 @@
   #chat-header {
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-size: 11px;
     color: #534AB7;
+    border-bottom: 1px solid #1a1a3a;
+    padding-bottom: 8px;
   }
 
   #state-dot {
@@ -58,28 +62,35 @@
     height: 7px;
     border-radius: 50%;
     background: #1D9E75;
-    margin-right: 6px;
+    margin-right: 7px;
     flex-shrink: 0;
+    transition: background 0.3s;
   }
 
-  #state-dot.thinking { background: #EF9F27; }
-  #state-dot.alert    { background: #E24B4A; }
+  #state-dot.thinking {
+    background: #EF9F27;
+    animation: pulse 0.6s infinite alternate;
+  }
+
+  @keyframes pulse {
+    from { opacity: 1; }
+    to   { opacity: 0.3; }
+  }
 
   #close-btn {
     margin-left: auto;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 16px;
     color: #534AB7;
-    line-height: 1;
-    padding: 2px 4px;
+    padding: 0 4px;
   }
 
-  #close-btn:hover { color: #7F77DD; }
+  #close-btn:hover { color: #e0e0ff; }
 
   #msgs {
-    height: 260px;
+    height: 280px;
     overflow-y: auto;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     line-height: 1.7;
     scrollbar-width: thin;
     scrollbar-color: #534AB7 transparent;
@@ -87,20 +98,25 @@
 
   .msg-u {
     color: #9FE1CB;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     font-size: 12px;
+    text-align: right;
+    padding: 4px 8px;
+    background: rgba(159,225,203,0.08);
+    border-radius: 8px;
+    margin-left: 30px;
   }
-
-  .msg-u::before { content: "you › "; opacity: 0.5; }
 
   .msg-a {
     color: #e0e0ff;
     margin-bottom: 10px;
     font-size: 12px;
-    line-height: 1.6;
+    line-height: 1.7;
+    padding: 4px 8px;
+    background: rgba(83,74,183,0.1);
+    border-radius: 8px;
+    margin-right: 30px;
   }
-
-  .msg-a::before { content: "🦆 "; }
 
   #input-row {
     display: flex;
@@ -109,14 +125,15 @@
 
   #inp {
     flex: 1;
-    background: #0a0a1a;
+    background: #0a0a1f;
     border: 1px solid #534AB7;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #e0e0ff;
-    padding: 7px 10px;
+    padding: 8px 12px;
     font-family: monospace;
     font-size: 12px;
     outline: none;
+    transition: border-color 0.2s;
   }
 
   #inp:focus { border-color: #9FE1CB; }
@@ -124,42 +141,32 @@
   #send-btn {
     background: #534AB7;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     color: white;
-    padding: 7px 14px;
+    padding: 8px 16px;
     cursor: pointer;
     font-size: 14px;
+    transition: background 0.2s;
   }
 
   #send-btn:hover { background: #7F77DD; }
-
-  #duck-label {
-    position: absolute;
-    bottom: 8px;
-    left: 112px;
-    color: #534AB7;
-    font-size: 11px;
-    font-family: monospace;
-    opacity: 0.7;
-    pointer-events: none;
-  }
 </style>
 </head>
 <body>
 
-<div id="duck-wrap" onclick="toggleChat()" title="Click to chat with AIOS">
+<div id="duck-wrap" onclick="toggleChat()" title="Click to chat · Ctrl+Alt+A">
   <canvas id="c" width="16" height="16"></canvas>
 </div>
-
-<span id="duck-label">click me</span>
 
 <div id="chat">
   <div id="chat-header">
     <div id="state-dot"></div>
-    <span id="state-text">AIOS ready</span>
+    <span id="state-text">AIOS — ready</span>
     <span id="close-btn" onclick="toggleChat()">✕</span>
   </div>
-  <div id="msgs"></div>
+  <div id="msgs">
+    <div class="msg-a">quack. ask me anything.</div>
+  </div>
   <div id="input-row">
     <input id="inp" type="text" placeholder="ask anything..."
            autocomplete="off"
@@ -169,98 +176,227 @@
 </div>
 
 <script>
-// ── Pixel duck ────────────────────────────────────────────────────────────────
-const P = [null,'#F5C842','#E8871A','#FFFFFF','#111111','#5DCAA5'];
+// ── Duck sprite ───────────────────────────────────────────────────────────────
+// 16x16 pixel duck — proper beak, round body, eye, feet
+// 0=transparent 1=yellow(body) 2=orange(beak/feet) 3=white(wing)
+// 4=black(eye/outline) 5=dark yellow(shadow)
+
+const P = [
+  null,
+  '#F5C518', // 1 yellow body
+  '#E07B10', // 2 orange beak + feet
+  '#FFF8DC', // 3 cream wing highlight
+  '#1a1a1a', // 4 dark eye
+  '#C8A010', // 5 dark yellow shadow
+  '#F0A500', // 6 mid yellow
+];
+
+// Walk right frame 1
+const DUCK_R1 = [
+  '0000001111000000',
+  '0000011111100000',
+  '0000111111110000',
+  '0000111411110000', // 4=eye
+  '0000111111112220', // beak right
+  '0001111111111220',
+  '0011133111111000',
+  '0011133111110000',
+  '0001111111100000',
+  '0000111111000000',
+  '0000111111000000',
+  '0000011110000000',
+  '0000022200000000', // feet
+  '0000202000000000',
+  '0000000000000000',
+  '0000000000000000',
+];
+
+// Walk right frame 2 — feet alternate
+const DUCK_R2 = [
+  '0000001111000000',
+  '0000011111100000',
+  '0000111111110000',
+  '0000111411110000',
+  '0000111111112220',
+  '0001111111111220',
+  '0011133111111000',
+  '0011133111110000',
+  '0001111111100000',
+  '0000111111000000',
+  '0000111111000000',
+  '0000011110000000',
+  '0000202000000000', // feet swapped
+  '0000022200000000',
+  '0000000000000000',
+  '0000000000000000',
+];
+
+// Walk left frame 1 (mirrored)
+const DUCK_L1 = [
+  '0000001111000000',
+  '0000011111100000',
+  '0000111111110000',
+  '0000111141110000',
+  '0222211111110000',
+  '0222111111111000',
+  '0000111111331100',
+  '0000011111331100',
+  '0000001111111000',
+  '0000000111111000',
+  '0000000111111000',
+  '0000000111100000',
+  '0000000022200000',
+  '0000000020200000',
+  '0000000000000000',
+  '0000000000000000',
+];
+
+// Walk left frame 2
+const DUCK_L2 = [
+  '0000001111000000',
+  '0000011111100000',
+  '0000111111110000',
+  '0000111141110000',
+  '0222211111110000',
+  '0222111111111000',
+  '0000111111331100',
+  '0000011111331100',
+  '0000001111111000',
+  '0000000111111000',
+  '0000000111111000',
+  '0000000111100000',
+  '0000000020200000',
+  '0000000022200000',
+  '0000000000000000',
+  '0000000000000000',
+];
+
+// Thinking — duck looks up, beak open
+const DUCK_THINK1 = [
+  '0000011111000000',
+  '0000111111100000',
+  '0000111411110000',
+  '0000111111112200',
+  '0000111111110000',
+  '0001111111111000',
+  '0011133111111000',
+  '0011133111110000',
+  '0001111111100000',
+  '0000111111000000',
+  '0000111111000000',
+  '0000011110000000',
+  '0000022200000000',
+  '0000202000000000',
+  '0000000000000000',
+  '0000000000000000',
+];
+
+const DUCK_THINK2 = [
+  '0000011111000000',
+  '0000111111100000',
+  '0000111411100000',
+  '0000111111002200',
+  '0000111111110000',
+  '0001111111111000',
+  '0011133111111000',
+  '0011133111110000',
+  '0001111111100000',
+  '0000111111000000',
+  '0000111111000000',
+  '0000011110000000',
+  '0000202000000000',
+  '0000022200000000',
+  '0000000000000000',
+  '0000000000000000',
+];
+
+// Alert — duck jumps
+const DUCK_ALERT1 = [
+  '0000001111000000',
+  '0000011111100000',
+  '0000111111110000',
+  '0000111411110000',
+  '0000111111112220',
+  '0001111111111220',
+  '0011133111111000',
+  '0001111111110000',
+  '0000111111100000',
+  '0000111111000000',
+  '0000011110000000',
+  '0000000000000000', // feet up — jumping
+  '0000022200000000',
+  '0000202000000000',
+  '0000000000000000',
+  '0000000000000000',
+];
 
 const FRAMES = {
-  idle: [
-    ['0000011100000000','0000111110000000','0000111410000000','0000111110000000',
-     '0022111111100000','0021111111110000','0011113311110000','0011113311100000',
-     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
-     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
-    ['0000000000000000','0000011100000000','0000111110000000','0000111410000000',
-     '0022111111000000','0021111111100000','0011113311110000','0011113311100000',
-     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
-     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
-  ],
-  thinking: [
-    ['0000011100000000','0000111110000000','0000111410000000','0000111110000000',
-     '0022011111100000','0020111111110000','0011113311110000','0011113311100000',
-     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
-     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
-    ['0000011100000000','0000111110000000','0000111410000000','0000111110000000',
-     '0022111111100000','0021111111110000','0011133311110000','0011333311100000',
-     '0001331111000000','0000111110000000','0000011100000000','0000022000000000',
-     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
-  ],
-  alert: [
-    ['0000011100000000','0000111110000000','0000111410000000','0022111111100000',
-     '0021111111110000','0011113311110000','0011113311100000','0001111111000000',
-     '0000111110000000','0000011100000000','0000022000000000','0000222000000000',
-     '0000000000000000','0000000000000000','0000000000000000','0000000000000000'],
-    ['0000000000000000','0000011100000000','0000111110000000','0000111410000000',
-     '0022111111100000','0021111111110000','0011113311110000','0011113311100000',
-     '0001111111000000','0000111110000000','0000011100000000','0000022000000000',
-     '0000222000000000','0000000000000000','0000000000000000','0000000000000000'],
-  ],
+  walkR:    [DUCK_R1, DUCK_R2],
+  walkL:    [DUCK_L1, DUCK_L2],
+  thinking: [DUCK_THINK1, DUCK_THINK2],
+  alert:    [DUCK_ALERT1, DUCK_R1],
+  idle:     [DUCK_R1, DUCK_R1],
 };
 
 const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-let duckState = 'idle';
-let frameIdx = 0;
-const speed = { idle: 700, thinking: 250, alert: 150 };
+const ctx    = canvas.getContext('2d');
 
-function drawDuck() {
-  const frames = FRAMES[duckState];
-  const f = frames[frameIdx % frames.length];
+let duckAnim  = 'walkR';
+let frameIdx  = 0;
+let chatOpen  = false;
+
+function drawFrame(frameData) {
   ctx.clearRect(0, 0, 16, 16);
   for (let y = 0; y < 16; y++) {
+    const row = frameData[y];
     for (let x = 0; x < 16; x++) {
-      const c = parseInt(f[y][x]);
+      const c = parseInt(row[x]);
       if (c === 0) continue;
       ctx.fillStyle = P[c];
       ctx.fillRect(x, y, 1, 1);
     }
   }
-  frameIdx++;
-  setTimeout(drawDuck, speed[duckState]);
 }
 
-drawDuck();
+const animSpeed = {
+  walkR: 400, walkL: 400,
+  thinking: 300, alert: 150, idle: 800,
+};
 
-// ── Chat UI ───────────────────────────────────────────────────────────────────
+function animate() {
+  const frames = FRAMES[duckAnim];
+  drawFrame(frames[frameIdx % frames.length]);
+  frameIdx++;
+  setTimeout(animate, animSpeed[duckAnim]);
+}
+
+animate();
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
 function toggleChat() {
-  const chat = document.getElementById('chat');
-  chat.classList.toggle('open');
-  const label = document.getElementById('duck-label');
-  if (chat.classList.contains('open')) {
-    label.style.display = 'none';
+  chatOpen = !chatOpen;
+  document.getElementById('chat').classList.toggle('open', chatOpen);
+  if (chatOpen) {
+    duckAnim = 'thinking';
     setTimeout(() => document.getElementById('inp').focus(), 50);
   } else {
-    label.style.display = 'block';
+    duckAnim = 'walkR';
   }
-}
-
-function addMsg(cls, text) {
-  const msgs = document.getElementById('msgs');
-  const d = document.createElement('div');
-  d.className = cls;
-  d.textContent = text;
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-  return d;
+  frameIdx = 0;
 }
 
 function setState(s) {
-  duckState = s;
+  duckAnim = s === 'thinking' ? 'thinking'
+           : s === 'alert'    ? 'alert'
+           : chatOpen         ? 'idle'
+           : 'walkR';
   frameIdx = 0;
   const dot  = document.getElementById('state-dot');
   const text = document.getElementById('state-text');
-  dot.className = s === 'idle' ? '' : s;
-  text.textContent = s === 'thinking' ? 'thinking...'
-                   : s === 'alert'    ? 'hey, got something for you'
-                   : 'AIOS ready';
+  dot.className  = s === 'thinking' ? 'thinking' : '';
+  text.textContent = s === 'thinking' ? 'AIOS — thinking...'
+                   : s === 'alert'    ? 'AIOS — hey!'
+                   : 'AIOS — ready';
 }
 
 async function send() {
@@ -269,29 +405,41 @@ async function send() {
   if (!text) return;
   inp.value = '';
 
-  addMsg('msg-u', text);
+  const msgs = document.getElementById('msgs');
+  const uDiv = document.createElement('div');
+  uDiv.className   = 'msg-u';
+  uDiv.textContent = text;
+  msgs.appendChild(uDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
   setState('thinking');
 
-  const msgs   = document.getElementById('msgs');
-  const respEl = document.createElement('div');
-  respEl.className = 'msg-a';
-  msgs.appendChild(respEl);
+  const aDiv = document.createElement('div');
+  aDiv.className   = 'msg-a';
+  aDiv.textContent = '';
+  msgs.appendChild(aDiv);
 
   try {
     await window.__TAURI__.core.invoke('send_message', { message: text });
   } catch(e) {
-    respEl.textContent = 'Error: ' + e;
+    aDiv.textContent = 'Error: ' + e;
     setState('idle');
   }
 }
 
-// ── Tauri event listeners ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  if (!window.__TAURI__) {
-    console.warn('Tauri not available — running in browser mode');
-    return;
+// ── Ctrl+Alt+A hotkey ─────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.altKey && e.key === 'a') {
+    toggleChat();
   }
+  if (e.key === 'Escape' && chatOpen) {
+    toggleChat();
+  }
+});
 
+// ── Tauri events ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!window.__TAURI__) return;
   const { listen } = window.__TAURI__.event;
 
   await listen('aios-state', e => setState(e.payload));
@@ -308,7 +456,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     msgs.scrollTop = msgs.scrollHeight;
   });
 
-  await listen('aios-response-done', () => setState('idle'));
+  await listen('aios-response-done', () => {
+    setState('idle');
+    duckAnim = chatOpen ? 'idle' : 'walkR';
+  });
+});
+
+// ── Roaming duck ──────────────────────────────────────────────────────────────
+let duckX     = 1050;
+let duckY     = 500;
+let duckVX    = 2;
+let roaming   = true;
+let screenW   = 1920;
+let screenH   = 1080;
+
+async function initRoaming() {
+  if (!window.__TAURI__) return;
+  try {
+    const [w, h] = await window.__TAURI__.core.invoke('get_screen_size');
+    screenW = w;
+    screenH = h;
+  } catch(e) {}
+  roamLoop();
+}
+
+function roamLoop() {
+  if (!roaming || chatOpen) {
+    setTimeout(roamLoop, 100);
+    return;
+  }
+
+  duckX += duckVX;
+
+  // Bounce off screen edges (window is 420px wide, duck is ~80px)
+  if (duckX + 420 >= screenW) {
+    duckVX    = -2;
+    duckAnim  = 'walkL';
+    frameIdx  = 0;
+  }
+  if (duckX <= 0) {
+    duckVX   = 2;
+    duckAnim = 'walkR';
+    frameIdx = 0;
+  }
+
+  if (window.__TAURI__) {
+    window.__TAURI__.core.invoke('move_window', { x: duckX, y: duckY }).catch(() => {});
+  }
+
+  setTimeout(roamLoop, 30);
+}
+
+// Start roaming after Tauri is ready
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(initRoaming, 500);
 });
 </script>
 </body>

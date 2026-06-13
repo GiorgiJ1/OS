@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { margin: 0; padding: 0; }
+  body {
+    background: transparent;
+    overflow: hidden;
+    width: 80px;
+    height: 80px;
+    cursor: pointer;
+  }
+  canvas {
+    image-rendering: pixelated;
+    width: 80px;
+    height: 80px;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="c" width="16" height="16" onclick="handleClick()"></canvas>
+
+<script>
+const P = [
+  null,
+  '#F5C518', '#E07B10', '#FFF8DC', '#1a1a1a', '#C8A010', '#F0A500',
+];
+
+const DUCK_R1 = [
+  '0000001111000000','0000011111100000','0000111111110000','0000111411110000',
+  '0000111111112220','0001111111111220','0011133111111000','0011133111110000',
+  '0001111111100000','0000111111000000','0000111111000000','0000011110000000',
+  '0000022200000000','0000202000000000','0000000000000000','0000000000000000',
+];
+const DUCK_R2 = [
+  '0000001111000000','0000011111100000','0000111111110000','0000111411110000',
+  '0000111111112220','0001111111111220','0011133111111000','0011133111110000',
+  '0001111111100000','0000111111000000','0000111111000000','0000011110000000',
+  '0000202000000000','0000022200000000','0000000000000000','0000000000000000',
+];
+const DUCK_L1 = [
+  '0000001111000000','0000011111100000','0000111111110000','0000111141110000',
+  '0222211111110000','0222111111111000','0000111111331100','0000011111331100',
+  '0000001111111000','0000000111111000','0000000111111000','0000000111100000',
+  '0000000022200000','0000000020200000','0000000000000000','0000000000000000',
+];
+const DUCK_L2 = [
+  '0000001111000000','0000011111100000','0000111111110000','0000111141110000',
+  '0222211111110000','0222111111111000','0000111111331100','0000011111331100',
+  '0000001111111000','0000000111111000','0000000111111000','0000000111100000',
+  '0000000020200000','0000000022200000','0000000000000000','0000000000000000',
+];
+const DUCK_THINK1 = [
+  '0000011111000000','0000111111100000','0000111411110000','0000111111112200',
+  '0000111111110000','0001111111111000','0011133111111000','0011133111110000',
+  '0001111111100000','0000111111000000','0000111111000000','0000011110000000',
+  '0000022200000000','0000202000000000','0000000000000000','0000000000000000',
+];
+const DUCK_THINK2 = [
+  '0000011111000000','0000111111100000','0000111411100000','0000111111002200',
+  '0000111111110000','0001111111111000','0011133111111000','0011133111110000',
+  '0001111111100000','0000111111000000','0000111111000000','0000011110000000',
+  '0000202000000000','0000022200000000','0000000000000000','0000000000000000',
+];
+
+const FRAMES = {
+  walkR:    [DUCK_R1, DUCK_R2],
+  walkL:    [DUCK_L1, DUCK_L2],
+  thinking: [DUCK_THINK1, DUCK_THINK2],
+};
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let anim     = 'walkR';
+let frameIdx = 0;
+const speed  = { walkR: 400, walkL: 400, thinking: 250 };
+
+function draw() {
+  const frames = FRAMES[anim];
+  const f      = frames[frameIdx % frames.length];
+  ctx.clearRect(0, 0, 16, 16);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const c = parseInt(f[y][x]);
+      if (c === 0) continue;
+      ctx.fillStyle = P[c];
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  frameIdx++;
+  setTimeout(draw, speed[anim]);
+}
+
+draw();
+
+// ── Roaming ───────────────────────────────────────────────────────────────────
+let duckX   = 800;
+let duckY   = 900;
+let vX      = 2;
+let screenW = 1920;
+let chatVisible = false;
+
+async function init() {
+  if (!window.__TAURI__) return;
+  try {
+    const [w, h] = await window.__TAURI__.core.invoke('get_screen_size');
+    screenW = w;
+    duckY   = h - 120;
+  } catch(e) {}
+  roam();
+}
+
+function roam() {
+  if (chatVisible) { setTimeout(roam, 100); return; }
+
+  duckX += vX;
+
+  if (duckX + 80 >= screenW) { vX = -2; anim = 'walkL'; frameIdx = 0; }
+  if (duckX <= 0)             { vX =  2; anim = 'walkR'; frameIdx = 0; }
+
+  if (window.__TAURI__) {
+    window.__TAURI__.core.invoke('move_window', { x: duckX, y: duckY })
+      .catch(() => {});
+  }
+
+  setTimeout(roam, 30);
+}
+
+// ── Click handler ─────────────────────────────────────────────────────────────
+async function handleClick() {
+  if (!window.__TAURI__) return;
+  chatVisible = !chatVisible;
+  anim = chatVisible ? 'thinking' : 'walkR';
+  frameIdx = 0;
+
+  try {
+    await window.__TAURI__.core.invoke('toggle_chat', {
+      duckX: duckX,
+      duckY: duckY,
+    });
+  } catch(e) { console.error(e); }
+}
+
+// ── Keyboard hotkey ───────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a') {
+    handleClick();
+  }
+});
+
+// ── Listen for chat closed event ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!window.__TAURI__) return;
+  const { listen } = window.__TAURI__.event;
+  await listen('chat-closed', () => {
+    chatVisible = false;
+    anim = 'walkR';
+    frameIdx = 0;
+  });
+  await listen('aios-state', e => {
+    if (e.payload === 'thinking') { anim = 'thinking'; frameIdx = 0; }
+    else if (!chatVisible)        { anim = 'walkR';    frameIdx = 0; }
+  });
+  setTimeout(init, 300);
+});
+</script>
+</body>
+</html>

@@ -10,7 +10,21 @@
     "windows": [
       {
         "label": "duck",
-        "title": "AIOS",
+        "title": "AIOS Duck",
+        "width": 80,
+        "height": 80,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "x": 800,
+        "y": 900,
+        "url": "duck.html"
+      },
+      {
+        "label": "chat",
+        "title": "AIOS Chat",
         "width": 400,
         "height": 500,
         "resizable": false,
@@ -18,15 +32,12 @@
         "transparent": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
-        "x": 1050,
-        "y": 250,
-        "devtools": true
+        "visible": false,
+        "x": 800,
+        "y": 400,
+        "url": "chat.html"
       }
-    ],
-    "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true
-    }
+    ]
   },
   "bundle": {
     "active": true,
