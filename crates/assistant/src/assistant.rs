@@ -3,6 +3,7 @@ use aios_memory::Database;
 use aios_models::{OllamaClient, OllamaConfig, ChatMessage};
 use aios_search::SearchEngine;
 use aios_shared::{Conversation, Message, Role};
+use aios_skills::{SkillRegistry, default_registry};
 use tokio::sync::mpsc;
 use tracing::info;
 use uuid::Uuid;
@@ -11,13 +12,15 @@ pub struct Assistant {
     pub db:    Database,
     ollama:    OllamaClient,
     search:    SearchEngine,
+    skills:    SkillRegistry,
 }
 
 impl Assistant {
     pub fn new(db: Database, config: OllamaConfig, index_path: &str) -> Result<Self> {
         let ollama = OllamaClient::new(config)?;
         let search = SearchEngine::new(index_path)?;
-        Ok(Self { db, ollama, search })
+        let skills = default_registry();
+        Ok(Self { db, ollama, search, skills })
     }
 
     pub fn with_defaults(db: Database) -> Result<Self> {
@@ -43,20 +46,18 @@ impl Assistant {
         self.db.create_conversation(title)
     }
 
-        /// Build the system prompt from memories + document context.
     fn build_system_prompt(
         &self,
         memories: &[(String, String)],
         context:  &str,
     ) -> String {
         let mut system = String::from(
-            "You are AIOS, a personal AI assistant running locally on the user's machine. \
-            You have already read and indexed the user's files. \
-            The content below labeled 'Content from the user's files' IS the actual text \
-            extracted directly from those files — it is already loaded into this conversation. \
-            When the user asks about a file, read the content provided below and report it. \
-            Do not say you cannot access files. The file content is right here in this prompt. \
-            Always answer directly from the provided content.\n\n"
+            "You are Skvanchi, a personal AI assistant running locally on the user's machine.\n\
+            CRITICAL RULES:\n\
+            1. If 'Results from tools' appears below, you MUST use that data to answer. Do not say you cannot search the web or access files — the results are already here.\n\
+            2. If 'From indexed documents' appears below, quote from it directly.\n\
+            3. Never tell the user to search elsewhere if tool results are provided.\n\
+            4. Answer directly and concisely from the provided context.\n\n"
         );
 
         if !memories.is_empty() {
@@ -68,14 +69,15 @@ impl Assistant {
         }
 
         if !context.is_empty() {
-            system.push_str("Content from the user's files (already extracted and loaded):\n\n");
+            system.push_str("=== CONTEXT (use this to answer) ===\n\n");
             system.push_str(context);
-            system.push_str("\n\nAnswer based on the above content. It is real file content.\n");
+            system.push_str("\n=== END CONTEXT ===\n\n");
+            system.push_str("You MUST answer from the context above. Do not ignore it.\n");
         }
 
         system
     }
-    /// Extract key facts from the conversation and store them as memories.
+
     async fn extract_and_store_memories(
         &self,
         user_input: &str,
@@ -98,7 +100,6 @@ impl Assistant {
 
         let raw = self.ollama.chat(&messages).await?;
 
-        // Parse the JSON response
         let cleaned = raw
             .trim()
             .trim_start_matches("```json")
@@ -122,7 +123,7 @@ impl Assistant {
         Ok(())
     }
 
-        pub async fn chat_stream_with_context(
+    pub async fn chat_stream_with_context(
         &self,
         conversation_id: Uuid,
         user_input:      &str,
@@ -132,7 +133,8 @@ impl Assistant {
         let memories = self.db.get_all_memories()?;
 
         // 2. Run skills
-        let skill_outputs = self.skills.execute_matching(user_input).await;
+        let skill_outputs: Vec<aios_skills::SkillOutput> =
+            self.skills.execute_matching(user_input).await;
         let skill_context = SkillRegistry::format_outputs(&skill_outputs);
 
         // 3. Search documents
@@ -225,6 +227,6 @@ impl Assistant {
     }
 
     pub async fn ollama_chat(&self, messages: &[aios_models::ChatMessage]) -> anyhow::Result<String> {
-    self.ollama.chat(messages).await
+        self.ollama.chat(messages).await
     }
 }

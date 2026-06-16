@@ -2,7 +2,6 @@ use crate::skill::{Skill, SkillOutput};
 use anyhow::Result;
 use async_trait::async_trait;
 use reqwest::Client;
-use serde::Deserialize;
 use std::time::Duration;
 use tracing::debug;
 
@@ -14,30 +13,26 @@ impl WebSearchSkill {
     pub fn new() -> Self {
         Self {
             client: Client::builder()
-                .timeout(Duration::from_secs(10))
-                .user_agent("Skvanchi/0.1 (personal AI assistant)")
+                .timeout(Duration::from_secs(15))
+                .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                 .build()
                 .expect("http client"),
         }
     }
-}
 
-#[derive(Deserialize)]
-struct DuckDuckGoResult {
-    #[serde(rename = "AbstractText")]
-    abstract_text: Option<String>,
-    #[serde(rename = "AbstractURL")]
-    abstract_url:  Option<String>,
-    #[serde(rename = "RelatedTopics")]
-    related_topics: Option<Vec<RelatedTopic>>,
-}
-
-#[derive(Deserialize)]
-struct RelatedTopic {
-    #[serde(rename = "Text")]
-    text: Option<String>,
-    #[serde(rename = "FirstURL")]
-    url:  Option<String>,
+    fn extract_query(input: &str) -> String {
+        let lower = input.to_lowercase();
+        let triggers = [
+            "search for ", "search ", "look up ", "find online ",
+            "google ", "latest news on ", "news about ",
+        ];
+        for trigger in &triggers {
+            if lower.starts_with(trigger) {
+                return input[trigger.len()..].trim().to_string();
+            }
+        }
+        input.trim().to_string()
+    }
 }
 
 #[async_trait]
@@ -50,72 +45,66 @@ impl Skill for WebSearchSkill {
 
     fn can_handle(&self, input: &str) -> bool {
         let lower = input.to_lowercase();
-        lower.contains("search")
-            || lower.contains("look up")
-            || lower.contains("find online")
-            || lower.contains("google")
-            || lower.contains("what is the latest")
-            || lower.contains("current price")
+        lower.starts_with("search")
+            || lower.starts_with("look up")
+            || lower.starts_with("find online")
+            || lower.contains("latest news")
             || lower.contains("news about")
-            || lower.contains("who is")
-            || lower.contains("when did")
-            || lower.contains("how much does")
     }
 
     async fn execute(&self, input: &str) -> Result<SkillOutput> {
-        // Extract search query — strip trigger words
-        let query = input
-            .to_lowercase()
-            .replace("search for", "")
-            .replace("search", "")
-            .replace("look up", "")
-            .replace("find online", "")
-            .replace("google", "")
-            .trim()
-            .to_string();
+        let query = Self::extract_query(input);
+        if query.is_empty() {
+            return Ok(SkillOutput::err("web_search", "Empty search query"));
+        }
 
-        debug!("Web search: {}", query);
+        debug!("Web search query: {}", query);
 
+        // Use SearXNG public instance — no API key, no scraping
         let url = format!(
-            "https://api.duckduckgo.com/?q={}&format=json&no_html=1&skip_disambig=1",
+            "https://searx.be/search?q={}&format=json&categories=general",
             urlencoding::encode(&query)
         );
 
-        let resp = self.client.get(&url).send().await?;
-        let result: DuckDuckGoResult = resp.json().await?;
+        let resp = self.client.get(&url).send().await;
 
-        let mut output = String::new();
-
-        if let Some(text) = &result.abstract_text {
-            if !text.is_empty() {
-                output.push_str(text);
-                if let Some(url) = &result.abstract_url {
-                    output.push_str(&format!("\nSource: {}", url));
-                }
-                output.push('\n');
-            }
-        }
-
-        if let Some(topics) = &result.related_topics {
-            for topic in topics.iter().take(3) {
-                if let Some(text) = &topic.text {
-                    if !text.is_empty() {
-                        output.push_str(&format!("- {}\n", text));
-                        if let Some(url) = &topic.url {
-                            output.push_str(&format!("  {}\n", url));
+        match resp {
+            Ok(r) if r.status().is_success() => {
+                let text = r.text().await?;
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(results) = json["results"].as_array() {
+                        if results.is_empty() {
+                            return Ok(SkillOutput::err("web_search", "No results found"));
                         }
+
+                        let output = results
+                            .iter()
+                            .take(5)
+                            .map(|r| {
+                                let title   = r["title"].as_str().unwrap_or("").to_string();
+                                let content = r["content"].as_str().unwrap_or("").to_string();
+                                let url     = r["url"].as_str().unwrap_or("").to_string();
+                                format!("**{}**\n{}\n{}\n", title, content, url)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+
+                        return Ok(SkillOutput::ok(
+                            format!("web: {}", &query[..query.len().min(40)]),
+                            output,
+                        ));
                     }
                 }
+                Ok(SkillOutput::err("web_search", "Could not parse search results"))
             }
+            Ok(r) => Ok(SkillOutput::err(
+                "web_search",
+                &format!("Search failed with status: {}", r.status()),
+            )),
+            Err(e) => Ok(SkillOutput::err(
+                "web_search",
+                &format!("Search request failed: {}", e),
+            )),
         }
-
-        if output.is_empty() {
-            output = format!("No results found for: {}", query);
-        }
-
-        Ok(SkillOutput::ok(
-            format!("web: {}", &query[..query.len().min(40)]),
-            output,
-        ))
     }
 }

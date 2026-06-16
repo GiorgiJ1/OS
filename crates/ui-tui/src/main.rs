@@ -128,6 +128,23 @@ println!("Filesystem watcher active on D:\\ and G:\\");
         stdin.lock().read_line(&mut input)?;
         let input = input.trim().to_string();
 
+        
+        if let Some(rest) = input.strip_prefix("/write ") {
+            // Find the LAST colon+space to split path from content
+            // This avoids splitting on D:\ 
+            if let Some(idx) = rest.rfind(": ") {
+                let path    = rest[..idx].trim();
+                let content = rest[idx + 2..].trim();
+                match tokio::fs::write(path, content).await {
+                    Ok(_)  => println!("Written {} bytes to {}", content.len(), path),
+                    Err(e) => println!("Error: {}", e),
+                }
+            } else {
+                println!("Usage: /write D:\\path.txt: content here");
+            }
+            continue;
+        }
+
         if input.is_empty() {
             continue;
         }
