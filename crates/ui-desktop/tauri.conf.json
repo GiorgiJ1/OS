@@ -18,9 +18,10 @@
         "transparent": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
-        "x": 800,
-        "y": 900,
-        "url": "duck.html"
+        "x": 200.0,
+        "y": 880.0,
+        "url": "duck.html",
+        "devtools": true
       },
       {
         "label": "chat",
@@ -35,7 +36,8 @@
         "visible": false,
         "x": 800,
         "y": 400,
-        "url": "chat.html"
+        "url": "chat.html",
+        "devtools": true
       }
     ]
   },

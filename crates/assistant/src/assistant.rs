@@ -122,7 +122,7 @@ impl Assistant {
         Ok(())
     }
 
-    pub async fn chat_stream_with_context(
+        pub async fn chat_stream_with_context(
         &self,
         conversation_id: Uuid,
         user_input:      &str,
@@ -131,31 +131,41 @@ impl Assistant {
         // 1. Load memories
         let memories = self.db.get_all_memories()?;
 
-        // 2. Search for relevant document chunks
+        // 2. Run skills
+        let skill_outputs = self.skills.execute_matching(user_input).await;
+        let skill_context = SkillRegistry::format_outputs(&skill_outputs);
+
+        // 3. Search documents
         let results = self.search.search(&self.db, user_input, 5).await?;
-        let context = if results.is_empty() {
+        let doc_context = if results.is_empty() {
             String::new()
         } else {
             let mut ctx = String::new();
             for (i, r) in results.iter().enumerate() {
-                ctx.push_str(&format!(
-                    "[{}]\n{}\n\n",
-                    i + 1,
-                    r.chunk.content
-                ));
+                ctx.push_str(&format!("[{}]\n{}\n\n", i + 1, r.chunk.content));
             }
             ctx
         };
 
-        // 3. Persist user message
+        // 4. Combine contexts
+        let mut full_context = String::new();
+        if !skill_context.is_empty() {
+            full_context.push_str(&skill_context);
+        }
+        if !doc_context.is_empty() {
+            full_context.push_str("From indexed documents:\n\n");
+            full_context.push_str(&doc_context);
+        }
+
+        // 5. Persist user message
         self.db.add_message(conversation_id, Role::User, user_input)?;
 
-        // 4. Build full message list
+        // 6. Build messages
         let history = self.db.get_messages(conversation_id)?;
         let mut ollama_messages: Vec<ChatMessage> = vec![
             ChatMessage {
                 role:    "system".to_string(),
-                content: self.build_system_prompt(&memories, &context),
+                content: self.build_system_prompt(&memories, &full_context),
             }
         ];
         for msg in &history {
@@ -166,25 +176,26 @@ impl Assistant {
         }
 
         info!(
-            "Sending {} messages | {} memories | {} context chunks",
+            "Sending {} messages | {} memories | {} skill results | {} doc chunks",
             ollama_messages.len(),
             memories.len(),
-            results.len()
+            skill_outputs.len(),
+            results.len(),
         );
 
-        // 5. Stream response
+        // 7. Stream response
         let full_response = self.ollama
             .chat_stream(&ollama_messages, tx)
             .await?;
 
-        // 6. Persist assistant response
+        // 8. Persist response
         let msg = self.db.add_message(
             conversation_id,
             Role::Assistant,
             &full_response,
         )?;
 
-        // 7. Extract memories from this exchange (fire and forget)
+        // 9. Extract memories
         let _ = self.extract_and_store_memories(user_input, &full_response).await;
 
         Ok(msg)
@@ -211,5 +222,9 @@ impl Assistant {
 
     pub async fn is_ready(&self) -> bool {
         self.ollama.health_check().await
+    }
+
+    pub async fn ollama_chat(&self, messages: &[aios_models::ChatMessage]) -> anyhow::Result<String> {
+    self.ollama.chat(messages).await
     }
 }
