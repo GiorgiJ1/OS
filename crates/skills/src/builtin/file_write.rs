@@ -81,6 +81,7 @@ fn extract_path(input: &str) -> Option<String> {
 fn extract_content(input: &str) -> String {
     // Look for content after common markers
     let markers = [
+        "content to write:",
         "containing:",
         "with content:",
         "content:",
@@ -96,6 +97,5 @@ fn extract_content(input: &str) -> String {
             return content.trim_matches(|c| c == '"' || c == '\'').to_string();
         }
     }
-    // Default empty content
     String::new()
 }

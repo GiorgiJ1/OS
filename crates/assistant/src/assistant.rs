@@ -46,6 +46,50 @@ impl Assistant {
         self.db.create_conversation(title)
     }
 
+    /// When the user asks to write/save "this response" without pasting content,
+    /// attach the previous assistant message so file_write can use it.
+    fn augment_skill_input(
+        &self,
+        conversation_id: Uuid,
+        user_input:      &str,
+    ) -> String {
+        let lower = user_input.to_lowercase();
+        let references_previous = lower.contains("this response")
+            || lower.contains("this responce")
+            || lower.contains("previous response")
+            || lower.contains("the above")
+            || lower.contains("what you said")
+            || lower.contains("your answer")
+            || lower.contains("your response")
+            || lower.contains("that answer")
+            || lower.contains("that response");
+        let is_write = lower.contains("write")
+            || lower.contains("save")
+            || lower.contains("put it in")
+            || lower.contains("into the file");
+
+        if !references_previous || !is_write {
+            return user_input.to_string();
+        }
+
+        let Ok(history) = self.db.get_messages(conversation_id) else {
+            return user_input.to_string();
+        };
+
+        if let Some(last) = history
+            .iter()
+            .rev()
+            .find(|m| m.role == Role::Assistant)
+        {
+            return format!(
+                "{user_input}\n\nContent to write:\n{}",
+                last.content
+            );
+        }
+
+        user_input.to_string()
+    }
+
     fn build_system_prompt(
         &self,
         memories: &[(String, String)],
@@ -54,10 +98,13 @@ impl Assistant {
         let mut system = String::from(
             "You are Skvanchi, a personal AI assistant running locally on the user's machine.\n\
             CRITICAL RULES:\n\
-            1. If 'Results from tools' appears below, you MUST use that data to answer. Do not say you cannot search the web or access files — the results are already here.\n\
-            2. If 'From indexed documents' appears below, quote from it directly.\n\
-            3. Never tell the user to search elsewhere if tool results are provided.\n\
-            4. Answer directly and concisely from the provided context.\n\n"
+            1. If 'Results from tools' appears below, you MUST answer using that data. \
+               Web search results are real and current — summarize them for the user. \
+               Do NOT say you cannot search the web when tool results are provided.\n\
+            2. If a tool reports failure, tell the user the search/write failed and include the error.\n\
+            3. If 'From indexed documents' appears below, quote from it directly.\n\
+            4. Never tell the user to search elsewhere if tool results are provided.\n\
+            5. Answer directly and concisely from the provided context.\n\n"
         );
 
         if !memories.is_empty() {
@@ -133,17 +180,27 @@ impl Assistant {
         let memories = self.db.get_all_memories()?;
 
         // 2. Run skills
+        let skill_input = self.augment_skill_input(conversation_id, user_input);
         let skill_outputs: Vec<aios_skills::SkillOutput> =
-            self.skills.execute_matching(user_input).await;
+            self.skills.execute_matching(&skill_input).await;
         let skill_context = SkillRegistry::format_outputs(&skill_outputs);
+        let has_web_results = skill_outputs.iter().any(|o| o.success && o.label.starts_with("web:"));
 
-        // 3. Search documents
-        let results = self.search.search(&self.db, user_input, 5).await?;
+        // 3. Search documents — skip when web search already returned results
+        let results = if has_web_results {
+            vec![]
+        } else {
+            self.search.search(&self.db, user_input, 5).await?
+        };
         let doc_context = if results.is_empty() {
             String::new()
         } else {
             let mut ctx = String::new();
             for (i, r) in results.iter().enumerate() {
+                // Only inject chunks with score above 0.4
+                if r.score < 0.4 {
+                    continue;
+                }
                 ctx.push_str(&format!("[{}]\n{}\n\n", i + 1, r.chunk.content));
             }
             ctx
