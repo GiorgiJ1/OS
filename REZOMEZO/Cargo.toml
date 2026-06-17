@@ -1,0 +1,9 @@
+[package]
+name = "cam_mouse"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# OpenCv bindings for Rust
+opencv = "0.98.1"
+enigo = { version = "0.3", features = ["serde"] }
