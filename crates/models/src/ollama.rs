@@ -24,6 +24,7 @@ impl Default for OllamaConfig {
             timeout: Duration::from_secs(120),
         }
     }
+    
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,6 +92,41 @@ impl OllamaClient {
 
         let chunk: OllamaChatChunk = resp.json().await?;
         Ok(chunk.message.map(|m| m.content).unwrap_or_default())
+    }
+
+        /// Send an image (base64-encoded) along with a prompt to a vision model.
+    pub async fn vision_chat(&self, prompt: &str, image_base64: &str, model: &str) -> Result<String> {
+        let url = format!("{}/api/generate", self.config.base_url);
+
+        #[derive(serde::Serialize)]
+        struct VisionRequest<'a> {
+            model:  &'a str,
+            prompt: &'a str,
+            images: Vec<&'a str>,
+            stream: bool,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct VisionResponse {
+            response: String,
+        }
+
+        let body = VisionRequest {
+            model,
+            prompt,
+            images: vec![image_base64],
+            stream: false,
+        };
+
+        let resp = self.http
+            .post(&url)
+            .json(&body)
+            .send()
+            .await?
+            .error_for_status()?;
+
+        let data: VisionResponse = resp.json().await?;
+        Ok(data.response)
     }
 
     /// Streaming — sends tokens over an mpsc channel as they arrive.

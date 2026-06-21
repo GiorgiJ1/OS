@@ -8,6 +8,20 @@ use std::io::{self, BufRead, Write};
 use tokio::sync::mpsc;
 use tracing::info;
 
+fn is_screen_vision_query(input: &str) -> bool {
+    let lower = input.to_lowercase();
+    lower.contains("what's on my screen")
+        || lower.contains("whats on my screen")
+        || lower.contains("what am i looking at")
+        || lower.contains("what do you see")
+        || lower.contains("look at my screen")
+        || lower.contains("look at monitor")
+        || lower.contains("look at screen")
+        || lower.starts_with("/screen")
+        || lower.contains("read my screen")
+        || lower.contains("screenshot")
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
@@ -44,6 +58,8 @@ async fn main() -> Result<()> {
     println!("  /index <path>       — index a file");
     println!("  /index-dir <path>   — index a directory");
     println!("  /embed <doc-uuid>   — embed a document's chunks");
+    println!("  /screen [n]         — describe what's on screen (optional monitor number)");
+    println!("  /screens            — list connected monitors");
     println!("  /quit               — exit\n");
             // Start filesystem watcher
     // Start filesystem watcher
@@ -260,6 +276,9 @@ println!("Filesystem watcher active on D:\\ and G:\\");
         let (tx, mut rx) = mpsc::channel::<String>(64);
 
         print!("AIOS: ");
+        if is_screen_vision_query(&input) {
+            print!("(capturing screen + running vision model — can take 1-2 min, please wait...) ");
+        }
         io::stdout().flush()?;
 
         tokio::select! {

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 aios-shared      = { path = "../shared" }
 aios-memory      = { path = "../memory" }
+aios-system = { path = "../system" }
 anyhow           = "1"
 thiserror        = "1"
 tracing          = "0.1"

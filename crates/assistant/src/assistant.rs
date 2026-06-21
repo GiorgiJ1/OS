@@ -99,9 +99,9 @@ impl Assistant {
             "You are Skvanchi, a personal AI assistant running locally on the user's machine.\n\
             CRITICAL RULES:\n\
             1. If 'Results from tools' appears below, you MUST answer using that data. \
-               Web search results are real and current — summarize them for the user. \
-               Do NOT say you cannot search the web when tool results are provided.\n\
-            2. If a tool reports failure, tell the user the search/write failed and include the error.\n\
+               Web search and screen vision results are real — summarize them for the user. \
+               Do NOT say you cannot search the web or see the screen when tool results are provided.\n\
+            2. If a tool reports failure, tell the user the search/write/screen capture failed and include the error.\n\
             3. If 'From indexed documents' appears below, quote from it directly.\n\
             4. Never tell the user to search elsewhere if tool results are provided.\n\
             5. Answer directly and concisely from the provided context.\n\n"
@@ -185,9 +185,12 @@ impl Assistant {
             self.skills.execute_matching(&skill_input).await;
         let skill_context = SkillRegistry::format_outputs(&skill_outputs);
         let has_web_results = skill_outputs.iter().any(|o| o.success && o.label.starts_with("web:"));
+        let has_screen_results = skill_outputs
+            .iter()
+            .any(|o| o.success && o.label.starts_with("screen:"));
 
-        // 3. Search documents — skip when web search already returned results
-        let results = if has_web_results {
+        // 3. Search documents — skip when web/screen skills already returned results
+        let results = if has_web_results || has_screen_results {
             vec![]
         } else {
             self.search.search(&self.db, user_input, 5).await?
@@ -218,6 +221,21 @@ impl Assistant {
 
         // 5. Persist user message
         self.db.add_message(conversation_id, Role::User, user_input)?;
+
+        // Screen vision already ran a vision model — return its answer directly
+        // instead of waiting again on the main chat model.
+        if let Some(screen) = skill_outputs
+            .iter()
+            .find(|o| o.success && o.label.starts_with("screen:"))
+        {
+            let response = screen.content.clone();
+            for chunk in response.split_inclusive(' ') {
+                let _ = tx.send(chunk.to_string()).await;
+            }
+            let msg = self.db.add_message(conversation_id, Role::Assistant, &response)?;
+            let _ = self.extract_and_store_memories(user_input, &response).await;
+            return Ok(msg);
+        }
 
         // 6. Build messages
         let history = self.db.get_messages(conversation_id)?;
