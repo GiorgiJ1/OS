@@ -57,12 +57,7 @@
     </g>
   </g>
 </svg>
-
-
-
-
-
-
+        
 ```bash
 cat > README.md << 'EOF'
 # AIOS — AI-Native Operating Layer for Linux
