@@ -1,3 +1,66 @@
+<svg width="100%" height="120" viewBox="0 0 1000 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .bg { fill: #0d0d1f; }
+      .title { font-family: 'Courier New', monospace; font-weight: bold; fill: #e0e0ff; }
+      .subtitle { font-family: 'Courier New', monospace; fill: #534AB7; }
+      .duck-group {
+        animation: walk 8s linear infinite;
+      }
+      @keyframes walk {
+        0%   { transform: translateX(-60px); }
+        100% { transform: translateX(1060px); }
+      }
+      .bob {
+        animation: bob 0.6s ease-in-out infinite alternate;
+      }
+      @keyframes bob {
+        from { transform: translateY(0px); }
+        to   { transform: translateY(-3px); }
+      }
+      rect.px { shape-rendering: crispEdges; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1000" height="120" rx="12"/>
+
+  <text x="40" y="50" class="title" font-size="28">Skvanchi</text>
+  <text x="40" y="75" class="subtitle" font-size="14">AI-native operating layer for Linux — always on, always watching, always yours</text>
+
+  <g class="duck-group">
+    <g class="bob" transform="translate(0,70) scale(2.2)">
+      <rect class="px" x="6" y="0" width="4" height="1" fill="#F5C518"/>
+      <rect class="px" x="5" y="1" width="6" height="1" fill="#F5C518"/>
+      <rect class="px" x="4" y="2" width="8" height="1" fill="#F5C518"/>
+      <rect class="px" x="4" y="3" width="3" height="1" fill="#F5C518"/>
+      <rect class="px" x="7" y="3" width="1" height="1" fill="#1a1a1a"/>
+      <rect class="px" x="8" y="3" width="4" height="1" fill="#F5C518"/>
+      <rect class="px" x="4" y="4" width="8" height="1" fill="#F5C518"/>
+      <rect class="px" x="12" y="4" width="3" height="1" fill="#E07B10"/>
+      <rect class="px" x="3" y="5" width="9" height="1" fill="#F5C518"/>
+      <rect class="px" x="12" y="5" width="3" height="1" fill="#E07B10"/>
+      <rect class="px" x="3" y="6" width="3" height="1" fill="#F5C518"/>
+      <rect class="px" x="6" y="6" width="3" height="1" fill="#FFF8DC"/>
+      <rect class="px" x="9" y="6" width="3" height="1" fill="#F5C518"/>
+      <rect class="px" x="3" y="7" width="3" height="1" fill="#F5C518"/>
+      <rect class="px" x="6" y="7" width="3" height="1" fill="#FFF8DC"/>
+      <rect class="px" x="9" y="7" width="3" height="1" fill="#F5C518"/>
+      <rect class="px" x="4" y="8" width="8" height="1" fill="#F5C518"/>
+      <rect class="px" x="5" y="9" width="6" height="1" fill="#F5C518"/>
+      <rect class="px" x="5" y="10" width="6" height="1" fill="#F5C518"/>
+      <rect class="px" x="6" y="11" width="4" height="1" fill="#F5C518"/>
+      <rect class="px" x="6" y="12" width="1" height="1" fill="#E07B10"/>
+      <rect class="px" x="9" y="12" width="1" height="1" fill="#E07B10"/>
+      <rect class="px" x="6" y="13" width="3" height="1" fill="#E07B10"/>
+      <rect class="px" x="9" y="13" width="3" height="1" fill="#E07B10"/>
+    </g>
+  </g>
+</svg>
+
+
+
+
+
 ```bash
 cat > README.md << 'EOF'
 # AIOS — AI-Native Operating Layer for Linux
