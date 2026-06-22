@@ -8,11 +8,8 @@ const MAX_WIDTH: u32 = 1280;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CaptureTarget {
-    /// Monitor under the mouse cursor (default).
     Cursor,
-    /// OS primary monitor.
     Primary,
-    /// 1-based monitor index (`1` = first display).
     Index(usize),
 }
 
@@ -54,7 +51,6 @@ pub fn list_screens() -> Result<Vec<ScreenInfo>> {
         .collect())
 }
 
-/// Capture the monitor under the cursor (falls back through other monitors on failure).
 pub fn capture_screen() -> Result<String> {
     capture_screen_with_target(CaptureTarget::Cursor).map(|r| r.image_base64)
 }

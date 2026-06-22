@@ -21,6 +21,7 @@ notify           = "6"
 walkdir          = "2"
 screenshots      = "0.8"
 base64           = "0.22"
+rusty-tesseract  = "1.1"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

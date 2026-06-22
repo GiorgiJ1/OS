@@ -1,5 +1,5 @@
 use crate::skill::{Skill, SkillOutput};
-use aios_system::{CaptureTarget, capture_screen_with_target, list_screens};
+use aios_system::{CaptureTarget, capture_screen_with_target, list_screens, extract_text};
 use anyhow::Result;
 use async_trait::async_trait;
 use tracing::{info, warn};
@@ -149,6 +149,12 @@ impl Skill for ScreenVisionSkill {
             capture.image_base64.len(),
         );
 
+        // Run OCR concurrently with vision request
+        let capture_for_ocr = capture.clone();
+        let ocr_handle = tokio::task::spawn_blocking(move || {
+            extract_text(&capture_for_ocr)
+        });
+
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(120))
             .build()?;
@@ -178,7 +184,7 @@ impl Skill for ScreenVisionSkill {
         let body = Req {
             model:  &self.model,
             prompt: &prompt,
-            images: vec![capture.image_base64],
+            images: vec![capture.image_base64.clone()],
             stream: false,
         };
 
@@ -223,12 +229,33 @@ impl Skill for ScreenVisionSkill {
 
         info!("Vision analysis complete after {:?}", start.elapsed());
 
+        // Collect OCR result (already running in parallel above)
+        let ocr_text = match ocr_handle.await {
+            Ok(Ok(text)) if !text.trim().is_empty() => Some(text),
+            Ok(Ok(_))  => None,
+            Ok(Err(e)) => {
+                warn!("OCR failed: {e:#}");
+                None
+            }
+            Err(e) => {
+                warn!("OCR task panicked: {e:#}");
+                None
+            }
+        };
+
+        let mut final_output = format!(
+            "Screenshot from {} ({}x{}).\n\n{}",
+            capture.monitor_label, capture.width, capture.height, data.response
+        );
+
+        if let Some(text) = ocr_text {
+            final_output.push_str("\n\n--- Exact text read from screen (OCR) ---\n");
+            final_output.push_str(&text);
+        }
+
         Ok(SkillOutput::ok(
             format!("screen: {}", capture.monitor_label),
-            format!(
-                "Screenshot from {} ({}x{}).\n\n{}",
-                capture.monitor_label, capture.width, capture.height, data.response
-            ),
+            final_output,
         ))
     }
 }
